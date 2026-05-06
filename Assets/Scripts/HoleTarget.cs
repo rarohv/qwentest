@@ -140,7 +140,7 @@ public class HoleTarget : MonoBehaviour
 
         while (t < 1f)
         {
-            t += captureSpeed * Time.deltaTime;
+            t += captureSpeed * Time.unscaledDeltaTime;
             golfBall.transform.position = Vector3.Lerp(startPos, endPos, t);
             yield return null;
         }
@@ -148,7 +148,7 @@ public class HoleTarget : MonoBehaviour
         if (audioManager != null)
             audioManager.PlayHoleSound();
 
-        if (golfManager != null)
+        if (golfManager != null && levelManager != null)
         {
             levelManager.RecordHoleStrokes(golfManager.StrokeCount);
 
@@ -162,12 +162,18 @@ public class HoleTarget : MonoBehaviour
             }
         }
 
-        yield return new WaitForSeconds(3f);
+        float wait = 0f;
+        while (wait < 3f)
+        {
+            wait += Time.unscaledDeltaTime;
+            yield return null;
+        }
 
-        if (!levelManager.IsLastHole)
+        if (levelManager != null && !levelManager.IsLastHole)
         {
             levelManager.AdvanceToNextHole();
-            golfManager.LoadNextHole();
+            if (golfManager != null)
+                golfManager.LoadNextHole();
         }
     }
 
