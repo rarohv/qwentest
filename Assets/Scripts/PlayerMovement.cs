@@ -12,21 +12,35 @@ public class PlayerMovement : MonoBehaviour
     private Vector3 velocity;
     private Transform cameraTransform;
     private bool isGrounded;
+    private bool movementEnabled = true;
 
     public float WalkSpeed => walkSpeed;
 
     void Awake()
     {
         controller = GetComponent<CharacterController>();
-        cameraTransform = Camera.main.transform;
+        if (Camera.main != null)
+            cameraTransform = Camera.main.transform;
     }
 
     void Update()
     {
+        if (cameraTransform == null && Camera.main != null)
+            cameraTransform = Camera.main.transform;
+
         isGrounded = controller.isGrounded;
-        Move();
+
+        if (movementEnabled && cameraTransform != null)
+        {
+            Move();
+            HandleJump();
+        }
         ApplyGravity();
-        HandleJump();
+    }
+
+    public void SetMovementEnabled(bool enabled)
+    {
+        movementEnabled = enabled;
     }
 
     void Move()

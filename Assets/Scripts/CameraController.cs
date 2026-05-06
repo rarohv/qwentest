@@ -4,7 +4,8 @@ public class CameraController : MonoBehaviour
 {
     [SerializeField] private float defaultSens = 2f;
     [SerializeField] private float distance = 5f;
-    [SerializeField] private float height = 2.5f;
+    [SerializeField] private float headExtra = 0.3f;
+    [SerializeField] private float fallbackHeadHeight = 1.7f;
     [SerializeField] private float minPitch = -30f;
     [SerializeField] private float maxPitch = 60f;
     [SerializeField] private float defaultFOV = 65f;
@@ -21,6 +22,7 @@ public class CameraController : MonoBehaviour
 
     private float playerMultiplier;
     private Transform player;
+    private CharacterController playerController;
     private Camera cam;
 
     private float yaw;
@@ -53,12 +55,31 @@ public class CameraController : MonoBehaviour
             cam.fieldOfView = currentFOV;
     }
 
+    void OnEnable()
+    {
+        Application.focusChanged += OnAppFocusChanged;
+    }
+
+    void OnDisable()
+    {
+        Application.focusChanged -= OnAppFocusChanged;
+    }
+
+    void OnAppFocusChanged(bool hasFocus)
+    {
+        if (hasFocus && Time.timeScale > 0f)
+        {
+            LockCursor(true);
+        }
+    }
+
     void AutoLinkPlayer()
     {
         GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
         if (playerObj != null)
         {
             player = playerObj.transform;
+            playerController = playerObj.GetComponent<CharacterController>();
             lastPlayerPosition = player.position;
         }
         else
@@ -86,7 +107,11 @@ public class CameraController : MonoBehaviour
 
     void LateUpdate()
     {
-        if (player == null) return;
+        if (player == null)
+        {
+            AutoLinkPlayer();
+            if (player == null) return;
+        }
 
         EstimatePlayerVelocity();
         HandleMouseInput();
@@ -96,13 +121,17 @@ public class CameraController : MonoBehaviour
 
     void EstimatePlayerVelocity()
     {
-        Vector3 currentVelocity = (player.position - lastPlayerPosition) / Time.deltaTime;
+        float dt = Mathf.Max(Time.deltaTime, 0.0001f);
+        Vector3 currentVelocity = (player.position - lastPlayerPosition) / dt;
         playerVelocityEstimate = Vector3.Lerp(playerVelocityEstimate, currentVelocity, verticalOffsetDamping);
         lastPlayerPosition = player.position;
     }
 
     void HandleMouseInput()
     {
+        if (Time.timeScale <= 0f) return;
+        if (Cursor.lockState != CursorLockMode.Locked) return;
+
         float mouseX = Input.GetAxisRaw("Mouse X") * defaultSens * playerMultiplier;
         float mouseY = Input.GetAxisRaw("Mouse Y") * defaultSens * playerMultiplier;
 
@@ -111,12 +140,21 @@ public class CameraController : MonoBehaviour
         pitch = Mathf.Clamp(pitch, minPitch, maxPitch);
     }
 
+    float ComputeHeadOffset()
+    {
+        if (playerController != null)
+        {
+            return playerController.center.y + playerController.height * 0.5f + headExtra;
+        }
+        return fallbackHeadHeight;
+    }
+
     void UpdateCameraPosition()
     {
         Vector3 lookAheadOffset = playerVelocityEstimate * lookAheadFactor;
         lookAheadOffset.y = 0f;
 
-        Vector3 targetCenter = player.position + Vector3.up * height + lookAheadOffset;
+        Vector3 targetCenter = player.position + Vector3.up * ComputeHeadOffset() + lookAheadOffset;
 
         Quaternion targetRotation = Quaternion.Euler(pitch, yaw, 0f);
         Vector3 desiredPosition = targetCenter - (targetRotation * Vector3.forward * distance);
@@ -136,10 +174,11 @@ public class CameraController : MonoBehaviour
     {
         Vector3 dir = to - from;
         float dist = dir.magnitude;
+        if (dist <= 0.0001f) return to;
 
-        if (Physics.SphereCast(from, collisionOffset, dir.normalized, out RaycastHit hit, dist, collisionMask))
+        if (Physics.SphereCast(from, collisionOffset, dir.normalized, out RaycastHit hit, dist, collisionMask, QueryTriggerInteraction.Ignore))
         {
-            return from + dir.normalized * (hit.distance - collisionOffset);
+            return from + dir.normalized * Mathf.Max(hit.distance - collisionOffset, 0.05f);
         }
 
         return to;
@@ -150,7 +189,7 @@ public class CameraController : MonoBehaviour
         if (cam == null) return;
 
         targetFOV = isGolfMode ? golfFOV : PlayerPrefs.GetFloat("CameraFOV", defaultFOV);
-        currentFOV = Mathf.Lerp(currentFOV, targetFOV, fovTransitionSpeed * Time.deltaTime);
+        currentFOV = Mathf.Lerp(currentFOV, targetFOV, fovTransitionSpeed * Time.unscaledDeltaTime);
         cam.fieldOfView = currentFOV;
     }
 
