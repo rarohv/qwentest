@@ -5,7 +5,6 @@ using System.Collections;
 [RequireComponent(typeof(SphereCollider))]
 public class GolfBall : MonoBehaviour
 {
-    [SerializeField] private float maxVelocity = 50f;
     [SerializeField] private float stopThreshold = 0.05f;
 
     private Rigidbody rb;

@@ -82,7 +82,7 @@ public class UIManager : MonoBehaviour
         }
         if (uniqueResolutions.Count == 0)
         {
-            uniqueResolutions.Add(new Resolution { width = Screen.width, height = Screen.height, refreshRate = 60 });
+            uniqueResolutions.Add(new Resolution { width = Screen.width, height = Screen.height });
         }
         selectedResolutionIndex = PlayerPrefs.GetInt("ResolutionIndex", uniqueResolutions.Count - 1);
         selectedResolutionIndex = Mathf.Clamp(selectedResolutionIndex, 0, uniqueResolutions.Count - 1);

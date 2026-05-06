@@ -43,7 +43,7 @@ public class GolfManager : MonoBehaviour
     public bool IsCharging => isCharging;
     public bool IsLastHoleComplete { get; private set; }
 
-    public bool BallReady => golfBall != null && !golfBall.IsMoving;
+    public bool BallReady => golfBall != null && !golfBall.IsMoving();
     public Vector3 BallPosition => golfBall != null ? golfBall.transform.position : Vector3.zero;
     public Vector3 HolePosition => holeTarget != null ? holeTarget.transform.position : Vector3.zero;
     public Transform BallTransform => golfBall != null ? golfBall.transform : null;
